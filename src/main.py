@@ -1,0 +1,88 @@
+import os
+import logging
+from pathlib import Path
+from rich import print
+from rich.markdown import Markdown
+
+from prompt.summary import summary
+from chat.agent import process_turn
+
+
+log_dir = Path("./logs")
+log_dir.mkdir(parents=True, exist_ok=True)
+
+# 1. 根 logger 设为 WARNING（所有第三方库默认）
+root_logger = logging.getLogger()
+root_logger.handlers.clear()
+root_logger.setLevel(logging.WARNING)
+
+# 2. 自己的代码包设为 DEBUG（按包名前缀）
+for module_prefix in ['chat', 'prompt']:  # 你的代码包名
+    logging.getLogger(module_prefix).setLevel(logging.DEBUG)
+
+# 3. 文件 handler：记录 DEBUG 及以上
+file_handler = logging.FileHandler(log_dir / "app.log", encoding="utf-8")
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+))
+
+# 4. 只给自己的代码包添加 handler（避免第三方日志进来）
+for module_prefix in ['chat', 'prompt']:
+    logging.getLogger(module_prefix).addHandler(file_handler)
+
+# 5. 获取当前模块 logger
+logger = logging.getLogger(__name__)
+
+
+# ---------- 初始化消息列表 ----------
+messages = []
+
+os.system('cls' if os.name == 'nt' else 'clear')
+
+
+# ---------- 主循环 ----------
+while True:
+    print('─' * os.get_terminal_size().columns)
+    print('[bold yellow]>[/bold yellow]  ', end='')
+    user_input = input('')
+    print('─' * os.get_terminal_size().columns)
+
+    if user_input.lower() == 'q':
+        print("再见！")
+        logger.info('退出软件')
+        break
+
+    elif user_input.lower() == '/summary':
+        print(f"[dim]压缩对话中...")
+
+        messages.append({'role': 'system', 'content': summary})
+        logger.debug(f'Messages: {messages}')
+
+        # 调用封装好的函数，自动处理工具调用
+        response = process_turn(messages)
+
+        if response is None:
+            continue
+
+        # 清空消息，只保留系统提示 + 摘要内容
+        messages.clear()
+        messages.append({
+            'role': 'system',
+            'content': f'此前对话：\n{response.choices[0].message.content}'
+        })
+        print(f"[dim]压缩对话成功[/dim]")
+
+    else:
+        messages.append({'role': 'user', 'content': user_input})
+
+        response = process_turn(messages)
+
+        if response is None or not response.choices:
+            continue
+
+        if response.choices[0].message.content:
+            print(Markdown(response.choices[0].message.content))
+            if response.usage:
+                print(f'[dim]本次消耗token {response.usage.total_tokens}[/dim]\n')
