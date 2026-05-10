@@ -1,7 +1,7 @@
-from chat.agent import process_turn
+from chat.agent import Agent
 # from chat.command import execute_command
 
 __all__ = [
-    'process_turn',
+    'Agent',
     # 'execute_command',
 ]

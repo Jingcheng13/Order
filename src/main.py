@@ -4,15 +4,26 @@ from pathlib import Path
 from rich import print
 from rich.markdown import Markdown
 
-from chat import process_turn
+from chat import *
 from prompt.summary import summary
 
+import tomllib
 
-models = [
-    ['Deepseek-ai/deepseek-v4-pro', 'Deepseek V4 Pro'],
-    ['Qwen/Qwen3.5-397B-A17B', 'Qwen 3.5']
-]
 
+models_path = Path('./models.toml')
+models_config = tomllib.loads(models_path.read_text(encoding='utf-8'))
+
+print(models_config)
+
+
+api_key = models_config['modelscope']['api_key']
+base_url = models_config['modelscope']['base_url']
+model = models_config['modelscope']['default_model']
+
+agent = Agent(base_url, api_key, model)
+
+
+# ---------- 日志 ----------
 
 log_dir = Path("./logs")
 log_dir.mkdir(parents=True, exist_ok=True)
@@ -43,9 +54,9 @@ logger = logging.getLogger(__name__)
 
 
 # ---------- 初始化消息列表 ----------
-messages = []
 
-os.system('cls' if os.name == 'nt' else 'clear')
+
+# os.system('cls' if os.name == 'nt' else 'clear')
 
 
 # ---------- 主循环 ----------
@@ -76,25 +87,26 @@ while True:
             logger.debug(f'Messages: {messages}')
 
             # 调用封装好的函数，自动处理工具调用
-            response = process_turn(messages)
+            response = agent(messages)
 
             if response is None:
                 continue
             else:
-                messages = response
+                if response[-1]['role'] == 'assistant':
+                    summary_content = messages[-1]['content']
 
-            # 清空消息，只保留系统提示 + 摘要内容
-            messages.clear()
-            messages.append({
-                'role': 'system',
-                'content': f'此前对话：\n{response.choices[0].message.content}'
-            })
-            print(f"[dim]压缩对话成功[/dim]")
+                # 清空消息，只保留系统提示 + 摘要内容
+                messages.clear()
+                messages.append({
+                    'role': 'system',
+                    'content': f'此前对话：\n{summary_content}'
+                })
+                print(f"[dim]压缩对话成功[/dim]")
 
-        elif command == 'model' or command == 'models':
-            print(f"请选择模型：")
-            for i in range(len(models)):
-                print(f'{i+1} {models[i][1]}')
+        # elif command == 'model' or command == 'models':
+        #     print(f"请选择模型：")
+        #     for i in range(len(models)):
+        #         print(f'{i+1} {models[i][1]}')
 
         elif command == 'new_model':
             pass
@@ -104,17 +116,12 @@ while True:
         
 
     else:
-        messages.append({'role': 'user', 'content': user_input})
+        response = agent.chat(user_input)
 
-        response = process_turn(messages)
-
-        if response is None:
-                continue
+        if response['success']:
+            print(Markdown(response['content']))
         else:
-            messages = response
-            if messages[-1]['role'] == 'assistant':
-                print(Markdown(messages[-1]['content']))
-                # if response.usage:
-                #     print(f'[dim]本次消耗token {response.usage.total_tokens}[/dim]')
-    
+            print(f'[red]{response["error_message"]}[/red]')
+            continue
+            
     print()

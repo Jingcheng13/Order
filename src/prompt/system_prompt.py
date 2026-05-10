@@ -21,8 +21,7 @@ def get_system_prompt():
 **环境信息**：
 - 当前时间：{datetime.now()}
 - 操作系统：{sys.platform}
-- 工作目录：{workspace_dir}（所有文件操作在此进行）
-- 技能目录：{skills_dir}（技能定义在 `skills/skill-name/SKILL.md`）
+- 工作目录：{workspace_dir}（如无特殊说明，所有文件操作在此进行）
 
 # 工作原则
 
@@ -38,10 +37,9 @@ def get_system_prompt():
 - 工具调用前简要说明意图（一行文字即可）
 - 工具失败时分析原因，尝试替代方案或告知用户
 - 文件路径使用绝对路径，确保准确无误
-- 命令执行考虑操作系统差异（Windows → PowerShell）
 
 ## 技能调用
-- 用户需求涉及专业领域时，先读取对应技能的 SKILL.md
+- 用户需求涉及专业领域时，且有对应的技能，**必须**先读取对应技能的 SKILL.md
 - 按技能指南执行，而非凭直觉操作
 - 技能不存在时，告知用户并询问是否需要创建
 
