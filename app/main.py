@@ -1,11 +1,11 @@
+from datetime import datetime
 import os
-import logging
 from pathlib import Path
 from rich import print
 from rich.markdown import Markdown
 
-from chat import *
-from prompt.summary import summary
+from agent import *
+import logging
 
 import tomllib
 
@@ -22,9 +22,6 @@ model = models_config['modelscope']['default_model']
 
 agent = Agent(base_url, api_key, model)
 
-
-# ---------- 日志 ----------
-
 log_dir = Path("./logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,7 +35,7 @@ for module_prefix in ['chat', 'prompt']:  # 你的代码包名
     logging.getLogger(module_prefix).setLevel(logging.DEBUG)
 
 # 3. 文件 handler：记录 DEBUG 及以上
-file_handler = logging.FileHandler(log_dir / "app.log", encoding="utf-8")
+file_handler = logging.FileHandler(log_dir / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log", encoding="utf-8")
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -48,13 +45,9 @@ file_handler.setFormatter(logging.Formatter(
 # 4. 只给自己的代码包添加 handler（避免第三方日志进来）
 for module_prefix in ['chat', 'prompt']:
     logging.getLogger(module_prefix).addHandler(file_handler)
-
-# 5. 获取当前模块 logger
+    
 logger = logging.getLogger(__name__)
-
-
-# ---------- 初始化消息列表 ----------
-
+# logger.error('软件启动')
 
 # os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -69,57 +62,57 @@ while True:
     if not user_input:
         continue
 
-    if user_input[0] == '/':
-        command = user_input[1:].lower()
+    # if user_input[0] == '/':
+    #     command = user_input[1:].lower()
 
-        if command == 'quit':
-            # print("再见！")
-            logger.info('退出软件')
-            break
+    #     if command == 'quit':
+    #         # print("再见！")
+    #         logger.info('退出软件')
+    #         break
 
-        elif command == 'summary':
-            if not messages:
-                print("[red]没有可压缩的对话[/red]")
-                continue
-            print(f"[dim]压缩对话中...")
+    #     elif command == 'summary':
+    #         if not messages:
+    #             print("[red]没有可压缩的对话[/red]")
+    #             continue
+    #         print(f"[dim]压缩对话中...")
 
-            messages.append({'role': 'system', 'content': summary})
-            logger.debug(f'Messages: {messages}')
+    #         messages.append({'role': 'system', 'content': summary})
+    #         logger.debug(f'Messages: {messages}')
 
-            # 调用封装好的函数，自动处理工具调用
-            response = agent(messages)
+    #         # 调用封装好的函数，自动处理工具调用
+    #         response = agent(messages)
 
-            if response is None:
-                continue
-            else:
-                if response[-1]['role'] == 'assistant':
-                    summary_content = messages[-1]['content']
+    #         if response is None:
+    #             continue
+    #         else:
+    #             if response[-1]['role'] == 'assistant':
+    #                 summary_content = messages[-1]['content']
 
-                # 清空消息，只保留系统提示 + 摘要内容
-                messages.clear()
-                messages.append({
-                    'role': 'system',
-                    'content': f'此前对话：\n{summary_content}'
-                })
-                print(f"[dim]压缩对话成功[/dim]")
+    #             # 清空消息，只保留系统提示 + 摘要内容
+    #             messages.clear()
+    #             messages.append({
+    #                 'role': 'system',
+    #                 'content': f'此前对话：\n{summary_content}'
+    #             })
+    #             print(f"[dim]压缩对话成功[/dim]")
 
-        # elif command == 'model' or command == 'models':
-        #     print(f"请选择模型：")
-        #     for i in range(len(models)):
-        #         print(f'{i+1} {models[i][1]}')
+    #     # elif command == 'model' or command == 'models':
+    #     #     print(f"请选择模型：")
+    #     #     for i in range(len(models)):
+    #     #         print(f'{i+1} {models[i][1]}')
 
-        elif command == 'new_model':
-            pass
+    #     elif command == 'new_model':
+    #         pass
 
-        else:
-            pass
+    #     else:
+    #         pass
         
 
     else:
         response = agent.chat(user_input)
 
         if response['success']:
-            print(Markdown(response['content']))
+            print(Markdown(response['ai_response']))
         else:
             print(f'[red]{response["error_message"]}[/red]')
             continue

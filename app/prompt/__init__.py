@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import sys
 import yaml
 
 
@@ -36,7 +36,27 @@ f'''<available_skills>
 </available_skills>
 '''
 
+def get_system_prompt():
+    workspace_dir = Path(__file__).parent.parent.parent / 'agent/workspace'
+    skills_dir = Path(__file__).parent.parent.parent / 'agent/skills'
+    platform = sys.platform
+    prompt = Path(__file__).parent / 'system.md'
+    return prompt.read_text(encoding='utf-8').format_map(locals())
+
+
+summary_prompt = Path(__file__).parent / 'summary.md'
+summary_prompt = summary_prompt.read_text(encoding='utf-8')
+system_prompt = get_system_prompt()
+skills_list = get_skills_list()
+
+
+__all__ = [
+    'system_prompt',
+    'summary_prompt',
+    'skills_list',
+]
+
 if __name__ == '__main__':
-    from rich.markdown import Markdown
-    from rich import print
-    print(Markdown(f'```\n{get_skills_list()}\n```'))
+    print(system_prompt)
+    print(skills_list)
+    print(summary_prompt)

@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 from typing import Any
@@ -5,7 +6,7 @@ from openai import OpenAI
 import openai
 from rich import print
 
-from chat.tools import shell, read, write, tools
+from agent.tools import run_command, read_file, write_file, tools
 from prompt import *
 
 
@@ -18,7 +19,21 @@ class Agent:
         self.api_key = api_key
         self.model = model
 
-        self.messages = [{}]
+        self.messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                    "text": system_prompt,
+                    "type": "text"
+                    },
+                    {
+                    "text": skills_list,                    
+                    "type": "text"
+                    }
+                ]
+            }
+        ]
 
         self.client = OpenAI(
             base_url=self.base_url,
@@ -30,26 +45,26 @@ class Agent:
         func_name = tool_call.function.name
         arguments = json.loads(tool_call.function.arguments)
 
-        if func_name == 'shell':
+        if func_name == 'run_command':
             command = arguments['command']
             print(f"[dim]执行命令: {command}[/dim]")
-            return shell(command)
+            return run_command(command)
 
-        elif func_name == 'write':
+        elif func_name == 'write_file':
             target_file = arguments['target_file']
             content = arguments['content']
             print(f"[dim]写入文件: {target_file}[/dim]")
-            return write(target_file, content)
+            return write_file(target_file, content)
 
-        elif func_name == 'read':
+        elif func_name == 'read_file':
             target_file = arguments['target_file']
             print(f"[dim]读取文件: {target_file}[/dim]")
-            return read(target_file)
+            return read_file(target_file)
         
-        elif func_name == 'edit':
+        elif func_name == 'edit_file':
             target_file = arguments['target_file']
             print(f"[dim]编辑文件: {target_file}[/dim]")
-            return read(arguments)
+            return read_file(arguments)
 
         else:
             logger.warning(f'未知工具调用: {func_name}')
@@ -104,10 +119,7 @@ class Agent:
 
         # logger.debug(f'消息列表（无system）: {self.messages}')
 
-        system_content = get_system_prompt() + get_skills_list()
-        self.messages[0] = {"role": "system", "content": system_content}
-
-        self.messages.append({'role': 'user', 'content': user_message})
+        self.messages.append({'role': 'user', 'content': f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {user_message}'})
 
         response = self.send_messages(self.messages)
         if not response['success']:

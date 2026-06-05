@@ -1,4 +1,4 @@
-from chat.agent import Agent
+from agent.agent import Agent
 # from chat.command import execute_command
 
 __all__ = [
